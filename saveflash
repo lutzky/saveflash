@@ -1,0 +1,26 @@
+#!/bin/bash -e
+#
+# This script will save currently-playing flash videos to a subdirectory under
+# $DESTDIR (by default, DESTDIR=$HOME). Some tricks are employed to get around
+# the temporary flash files being deleted as they're played.
+#
+# It may be helpful to run this script as root, as the process playing flash
+# video may not be running as your current user. If so, use sudo - the
+# permissions will be automatically modified after completion.
+#
+# Author: Ohad Lutzky <ohad@lutzky.net>
+
+DESTDIR=${DESTDIR:-$HOME}
+
+for pid in $(pgrep -f flashplayer.so) $(pgrep -f ppapi); do
+	TEMPDIR=$(mktemp -d $DESTDIR/flash.XXXXX)
+	echo "Saving results for PID $pid to $TEMPDIR"
+	for fd in /proc/$pid/fd/*; do
+		if [[ $(file -L $fd) == *Flash* ]]; then
+			DESTFILE=$(mktemp $TEMPDIR/FlashXXXXXX.flv)
+			echo $DESTFILE
+			cat $fd > $DESTFILE
+		fi
+	done
+	[[ $SUDO_USER ]] && chown -R $SUDO_USER $TEMPDIR
+done
